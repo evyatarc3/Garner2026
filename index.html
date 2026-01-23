@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>ניסוי גארנר</title>
+    <script>
+        window.onerror = function(msg, url, line) {
+            alert("שגיאה התרחשה:\n" + msg + "\nבשורה: " + line);
+        };
+    </script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #eceff1; color: #2d3436; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; user-select: none; text-align: center; }
+        #container { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); width: 90%; max-width: 1100px; min-height: 700px; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #btn-emergency { position: fixed; top: 20px; left: 20px; background-color: #c0392b; color: white; border: none; padding: 15px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; z-index: 10000; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: none; font-size: 16px; }
+        #btn-emergency:hover { background-color: #a93226; }
+        h1, h2 { color: #2c3e50; margin-bottom: 20px; }
+        h3 { color: #7f8c8d; margin-bottom: 10px; }
+        p { font-size: 20px; line-height: 1.6; max-width: 800px; margin: 10px auto; }
+        .hidden { display: none !important; }
+        .btn { background-color: #2980b9; color: white; border: none; padding: 15px 40px; font-size: 22px; border-radius: 8px; cursor: pointer; margin: 20px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .btn:hover { background-color: #1f618d; transform: translateY(-2px); }
+        .btn:disabled { background-color: #bdc3c7; cursor: not-allowed; transform: none; }
+        .btn-audio { background-color: #27ae60; }
+        .btn-secondary { background-color: #7f8c8d; font-size: 18px; }
+        .btn-summary { background-color: #8e44ad; }
+        .form-group { margin-bottom: 25px; text-align: right; width: 300px; margin: 20px auto; }
+        label { display: block; font-weight: bold; font-size: 18px; margin-bottom: 8px; }
+        input, select { width: 100%; padding: 12px; font-size: 18px; text-align: center; border: 2px solid #dfe6e9; border-radius: 6px; }
+        .list-container { text-align: right; background: #f8f9fa; padding: 20px; border-radius: 8px; height: 300px; overflow-y: auto; width: 80%; margin: 0 auto; border: 1px solid #dee2e6; font-size: 18px; }
+        .list-item { padding: 8px 0; border-bottom: 1px solid #eee; }
+        #fixation { font-size: 120px; color: #2d3436; margin: 30px 0; transition: color 0.2s; }
+        #step-instruction { font-size: 26px; color: #d35400; font-weight: bold; margin-top: 20px; }
+        .keys-layout { display: flex; gap: 20px; justify-content: center; margin-top: 40px; direction: ltr; }
+        .key-box { border: 3px solid #2c3e50; padding: 20px 40px; border-radius: 12px; background: #fff; min-width: 140px; text-align: center; }
+        .key-name { font-size: 30px; font-weight: bold; color: #2c3e50; display: block; }
+        .key-val { font-size: 22px; font-weight: bold; color: #2980b9; display: block; margin-top: 5px; }
+        .tables-wrapper { width: 100%; max-height: 400px; overflow-y: auto; margin-top: 20px; direction: rtl; }
+        table { width: 90%; border-collapse: collapse; margin: 10px auto; font-size: 18px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        th { background-color: #f2f2f2; position: sticky; top: 0; }
+        .finish-buttons { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-top: 30px;}
+        .feedback-correct { color: #27ae60; font-weight: bold; font-size: 36px; }
+        .feedback-incorrect { color: #e74c3c; font-weight: bold; font-size: 36px; }
+        .practice-stimulus { font-size: 48px; font-weight: bold; margin: 20px 0; }
+        .emphasis-box { background: #fff3cd; border: 2px solid #ffc107; padding: 15px; border-radius: 8px; margin: 20px auto; max-width: 600px; }
+        .emphasis-text { color: #856404; font-weight: bold; font-size: 18px; }
+        .learning-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 30px auto; max-width: 700px; }
+        .learning-card { border: 2px solid #3498db; border-radius: 12px; padding: 20px; background: #f8f9fa; }
+        .learning-card h3 { color: #3498db; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+    <button id="btn-emergency" onclick="emergencySave()">🛑 סיום מיידי ושמירה</button>
+
+<div id="container">
+
+    <!-- מסך הגדרות -->
+    <div id="screen-setup">
+        <h1>ניסוי גארנר (v47.0)</h1>
+        <div class="form-group">
+            <label>מספר נבדק:</label>
+            <input type="text" id="inp-subject" placeholder="לדוגמה: 1-24">
+        </div>
+        <div class="form-group">
+            <label>ממד רלוונטי (קבוצה):</label>
+            <select id="inp-group">
+                <option value="PITCH">קבוצה 1: צליל (Pitch)</option>
+                <option value="ODOR">קבוצה 2: ריח (Odor)</option>
+            </select>
+        </div>
+        <button class="btn" onclick="initExperiment()">המשך</button>
+    </div>
+
+    <!-- מסך הסכמה -->
+    <div id="screen-consent" class="hidden">
+        <h2>הסכמה מדעת</h2>
+        <div style="background: #fff8e1; padding: 20px; border-radius: 8px; text-align: right; width: 90%; margin: 20px auto;">
+            <label style="display: flex; gap: 15px; align-items: center; cursor: pointer;">
+                <input type="checkbox" id="chk-consent" onchange="toggleConsentBtn()" style="width: 25px; height: 25px;">
+                <span>אני מאשר/ת את השתתפותי בניסוי. ידוע לי שניתן להפסיק בכל עת.</span>
+            </label>
+        </div>
+        <button class="btn" id="btn-consent-next" disabled onclick="goToLearning()">אישור ומעבר ללמידה</button>
+    </div>
+
+    <!-- מסך למידה - היכרות עם כל הגירויים -->
+    <div id="screen-learning" class="hidden">
+        <h2>שלב למידה - היכרות עם הגירויים</h2>
+        <p>בניסוי זה תיחשפו לשני סוגי גירויים: <strong>צלילים</strong> ו<strong>ריחות</strong>.<br>
+        כעת נכיר את כל ארבעת הגירויים.</p>
+        
+        <div class="learning-grid">
+            <div class="learning-card">
+                <h3>🔊 צלילים</h3>
+                <p>שני צלילים בתדרים שונים:</p>
+                <button class="btn btn-audio" onclick="playLearnSound('high')" style="margin: 5px; padding: 10px 20px; font-size: 16px;">
+                    צליל גבוה (V) - 745Hz
+                </button>
+                <button class="btn btn-audio" onclick="playLearnSound('low')" style="margin: 5px; padding: 10px 20px; font-size: 16px;">
+                    צליל נמוך (B) - 482Hz
+                </button>
+            </div>
+            <div class="learning-card">
+                <h3>👃 ריחות</h3>
+                <p>שני ריחות שונים:</p>
+                <div style="font-size: 18px; margin: 10px 0; padding: 10px; background: #e8f4f8; border-radius: 8px;">
+                    <strong>V</strong> = PEA (ריח פרחוני)
+                </div>
+                <div style="font-size: 18px; margin: 10px 0; padding: 10px; background: #e8f4f8; border-radius: 8px;">
+                    <strong>B</strong> = Indole (ריח אורגני)
+                </div>
+            </div>
+        </div>
+
+        <div id="learn-feedback" style="margin-top: 20px; height: 30px; color: green; font-weight: bold; font-size: 24px;"></div>
+
+        <p style="color: #7f8c8d;">(ניתן להשתמש גם במקשים V ו-B במקלדת להאזנה לצלילים)</p>
+        
+        <div class="emphasis-box">
+            <p class="emphasis-text">🎯 שימו לב: בניסוי תתבקשו להגיב <u>כמה שיותר מהר</u> וגם <u>כמה שיותר מדויק</u>.<br>
+            שני אלו חשובים <strong>במידה שווה</strong>!</p>
+        </div>
+        
+        <button class="btn" onclick="startPractice()">המשך לשלב אימון</button>
+    </div>
+
+    <!-- מסך חוצץ - קריאה לנסיין -->
+    <div id="screen-call-experimenter" class="hidden">
+        <h2>⏸️ המתן לנסיין</h2>
+        <p style="font-size: 24px;">נא לקרוא לנסיין להכנת השלב הבא.</p>
+        <p style="color: #7f8c8d; font-size: 18px;">(הנסיין ילחץ על הכפתור כדי להמשיך)</p>
+        <button class="btn" onclick="showPracticeOdorPrep()">לנסיין: לחץ כאן להכנת הריחות</button>
+    </div>
+
+    <!-- מסך הכנת ריחות לנסיין - אימון -->
+    <div id="screen-practice-odor-prep" class="hidden">
+        <h2>🧪 הכנה לאימון ריחות (לנסיין)</h2>
+        <h3 style="color: #e74c3c;">מסך זה מיועד לנסיין בלבד!</h3>
+        <p style="color: #c0392b; font-weight: bold;">סדר את הריחות לפי הרשימה הבאה:</p>
+        <div id="practice-odor-list" class="list-container" style="height: 200px;"></div>
+        <div style="margin-top: 20px;">
+            <button class="btn" onclick="showPracticeIntroForOdor()">הכול מוכן - קרא לנבדק</button>
+        </div>
+    </div>
+
+    <!-- מסך הוראות אימון -->
+    <div id="screen-practice-intro" class="hidden">
+        <h2>שלב אימון</h2>
+        <p id="practice-intro-text"></p>
+        
+        <div class="emphasis-box">
+            <p class="emphasis-text">🎯 הגיבו <strong>כמה שיותר מהר</strong> וגם <strong>כמה שיותר מדויק</strong>!</p>
+        </div>
+        
+        <div class="keys-layout">
+            <div class="key-box">
+                <span class="key-name">V</span>
+                <span id="practice-lbl-v" class="key-val"></span>
+            </div>
+            <div class="key-box">
+                <span class="key-name">B</span>
+                <span id="practice-lbl-b" class="key-val"></span>
+            </div>
+        </div>
+        
+        <button class="btn" onclick="startPracticeTrials()">התחל אימון</button>
+    </div>
+
+    <!-- מסך ניסיונות אימון -->
+    <div id="screen-practice-trial" class="hidden">
+        <h3 id="practice-header"></h3>
+        <div id="practice-fixation" style="font-size: 120px; color: #2d3436; margin: 30px 0;">+</div>
+        <div id="practice-stimulus" class="practice-stimulus"></div>
+        <div id="practice-feedback" style="height: 50px; margin-top: 20px;"></div>
+        <div id="practice-instruction" style="font-size: 22px; color: #d35400; font-weight: bold; margin-top: 20px;"></div>
+    </div>
+
+    <!-- מסך סיום אימון -->
+    <div id="screen-practice-complete" class="hidden">
+        <h2>✅ שלב האימון הסתיים!</h2>
+        <p>כעת נעבור לניסוי עצמו.</p>
+        
+        <div class="emphasis-box">
+            <p class="emphasis-text">🎯 זכרו: הגיבו <strong>כמה שיותר מהר</strong> וגם <strong>כמה שיותר מדויק</strong>!<br>
+            שני אלו חשובים <strong>במידה שווה</strong>!</p>
+        </div>
+        
+        <button class="btn" onclick="goToBlockPrep()">התחל את הניסוי</button>
+    </div>
+
+    <!-- מסך הכנת בלוק -->
+    <div id="screen-prep" class="hidden">
+        <h2 id="prep-title">הכנת בלוק</h2>
+        <h3 id="prep-subtitle"></h3>
+        <p style="color: #c0392b; font-weight: bold;">הוראה לנסיין: סדר את הריחות בסדר הבא:</p>
+        <div id="prep-list" class="list-container"></div>
+        <div style="margin-top: 20px;">
+            <button class="btn" onclick="goToInstructions()">הכול מוכן - קרא לנבדק</button>
+        </div>
+    </div>
+
+    <!-- מסך הוראות לבלוק -->
+    <div id="screen-instructions" class="hidden">
+        <h2>הוראות לבלוק הקרוב</h2>
+        <p>עליך לזהות את: <strong id="txt-target" style="color: #2980b9; text-decoration: underline;"></strong>.</p>
+        
+        <div class="emphasis-box">
+            <p class="emphasis-text">🎯 הגיבו <strong>כמה שיותר מהר</strong> וגם <strong>כמה שיותר מדויק</strong>!<br>
+            שני אלו חשובים <strong>במידה שווה</strong>!</p>
+        </div>
+        
+        <p><strong>מהלך הצעד:</strong></p>
+        <ol style="text-align: right; width: 80%; margin: 0 auto; font-size: 20px;">
+            <li>כאשר ידך מוכנה להרחה - <strong>לחץ על מקש הרווח (Space)</strong>.</li>
+            <li>המתן חצי שנייה לצליל.</li>
+            <li>בצע הרחה והגב מיד בעזרת המקשים V או B:</li>
+        </ol>
+
+        <div class="keys-layout">
+            <div class="key-box">
+                <span class="key-name">V</span>
+                <span id="instr-lbl-v" class="key-val"></span>
+            </div>
+            <div class="key-box">
+                <span class="key-name">B</span>
+                <span id="instr-lbl-b" class="key-val"></span>
+            </div>
+        </div>
+        <button class="btn" onclick="startBlock()">התחל בלוק</button>
+    </div>
+
+    <!-- מסך ניסוי -->
+    <div id="screen-trial" class="hidden">
+        <div id="fixation">+</div>
+        <div id="step-instruction">לחץ על רווח (Space) כדי להתחיל</div>
+    </div>
+
+    <!-- מסך הפסקה בין בלוקים -->
+    <div id="screen-break" class="hidden">
+        <h2>סיום בלוק</h2>
+        <p>נא לקרוא לנסיין.</p>
+        <button class="btn" onclick="nextBlock()">המשך לבלוק הבא</button>
+    </div>
+
+    <!-- מסך סיום -->
+    <div id="screen-finish" class="hidden">
+        <h1>הניסוי הסתיים!</h1>
+        <p style="color: green; font-weight: bold;">קובץ הנתונים הגולמיים (Raw Data) ירד למחשב.</p>
+        
+        <div class="tables-wrapper">
+            <span style="font-weight: bold; font-size: 22px;">סיכום ממוצעים (RT ב-ms)</span>
+            <table id="table-stage-summary">
+                <thead><tr><th>שלב</th><th>RT ממוצע (נכונות בלבד)</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="finish-buttons">
+            <button class="btn btn-summary" onclick="downloadSummaryCSV()">📥 הורד קובץ סיכום ממוצעים</button>
+            <button class="btn btn-secondary" onclick="location.reload()">התחל נבדק חדש</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // --- קבועים ---
+    const FREQ_L = 482; // B = Low
+    const FREQ_H = 745; // V = High
+    const ODOR_A = "PEA"; 
+    const ODOR_B = "Indole"; 
+    const DELAY_MS = 500;
+    const AUDIO_VOLUME = 0.15; // ווליום קבוע ונמוך יותר
+
+    // --- משתנים ---
+    let audioCtx = null;
+    let osc = null;
+    let gainNode = null;
+    let timer = null;
+
+    let subjectId = "";
+    let group = ""; 
+    
+    let allBlocks = []; 
+    let currentBlockIndex = 0;
+    let currentTrialIndex = 0;
+    let experimentResults = []; 
+    
+    let trialState = 'idle'; 
+    let trialStartTime = 0;
+    
+    let activeScreenId = 'screen-setup';
+
+    // --- משתני אימון ---
+    let practiceOrder = []; // סדר האימון (צליל/ריח)
+    let currentPracticePhase = 0; // 0 = ממד ראשון, 1 = ממד שני
+    let currentPracticeType = ''; // 'pitch' או 'odor'
+    let practiceTrials = [];
+    let currentPracticeTrialIndex = 0;
+    let practiceTrialStartTime = 0;
+    let practiceState = 'idle';
+
+    // ==========================================
+    // ניהול מסכים
+    // ==========================================
+    function showScreen(id) {
+        stopSound();
+        if(timer) clearTimeout(timer);
+
+        const screens = document.querySelectorAll('#container > div');
+        for(let i=0; i<screens.length; i++) {
+            screens[i].classList.add('hidden');
+        }
+        document.getElementById(id).classList.remove('hidden');
+        activeScreenId = id;
+
+        const btnEm = document.getElementById('btn-emergency');
+        if (id === 'screen-setup' || id === 'screen-finish') {
+            btnEm.style.display = 'none';
+        } else {
+            btnEm.style.display = 'block';
+        }
+    }
+
+    // ==========================================
+    // אתחול האודיו
+    // ==========================================
+    function initAudio() {
+        if (!audioCtx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    // ==========================================
+    // 1. אתחול
+    // ==========================================
+    function initExperiment() {
+        const subjInput = document.getElementById('inp-subject');
+        const groupInput = document.getElementById('inp-group');
+        
+        subjectId = subjInput.value.trim();
+        if(!subjectId) { 
+            alert("נא להזין מספר נבדק"); 
+            return; 
+        }
+        group = groupInput.value;
+
+        createExperimentPlan();
+        showScreen('screen-consent');
+    }
+
+    // יצירת מערך הניסוי עם הרנדומיזציה החדשה ו-BlockID
+    function createExperimentPlan() {
+        allBlocks = [];
+        let stagesData = [];
+
+        // 1. Baseline
+        let baselineBlocks = [];
+        if(group === 'PITCH') {
+            baselineBlocks.push(generateBlockTrials('Baseline', 'Fixed_Odor_A', 'A', null, 6));
+            baselineBlocks.push(generateBlockTrials('Baseline', 'Fixed_Odor_B', 'B', null, 6));
+        } else {
+            baselineBlocks.push(generateBlockTrials('Baseline', 'Fixed_Pitch_High', null, 'high', 6));
+            baselineBlocks.push(generateBlockTrials('Baseline', 'Fixed_Pitch_Low', null, 'low', 6));
+        }
+        shuffleArray(baselineBlocks);
+        baselineBlocks.forEach((blk, idx) => blk.blockID = `Baseline_${idx+1}`);
+        stagesData.push(baselineBlocks);
+
+        // 2. Filtering
+        let filteringBlocks = [];
+        filteringBlocks.push(generateBlockTrials('Filtering', 'Random', null, null, 12));
+        filteringBlocks[0].blockID = 'Filtering_1';
+        stagesData.push(filteringBlocks);
+
+        // 3. Correlation
+        let correlationBlocks = [];
+        correlationBlocks.push(generateBlockTrials('Correlation', 'Corr_Pos', 'corr_pos', 'corr_pos', 6));
+        correlationBlocks.push(generateBlockTrials('Correlation', 'Corr_Neg', 'corr_neg', 'corr_neg', 6));
+        shuffleArray(correlationBlocks);
+        correlationBlocks.forEach((blk, idx) => blk.blockID = `Correlation_${idx+1}`);
+        stagesData.push(correlationBlocks);
+
+        // רנדומיזציה של סדר השלבים (Stages)
+        shuffleArray(stagesData);
+
+        // איחוד הכל לרשימה אחת
+        stagesData.forEach(stageBlocks => {
+            stageBlocks.forEach(blk => allBlocks.push(blk));
+        });
+        
+        // מספור רץ לתצוגה הכללית
+        allBlocks.forEach((blk, index) => {
+            blk.displayNum = index + 1;
+        });
+    }
+
+    function generateBlockTrials(stageName, blockSubType, fixedOdor, fixedPitch, trialCount) {
+        let trials = [];
+        let combinations = [];
+
+        if (stageName === 'Correlation') {
+            if(fixedOdor === 'corr_pos') {
+                combinations.push({ o:'A', p:'high', type:'congruent' }); 
+                combinations.push({ o:'B', p:'low', type:'congruent' });
+            } else { 
+                combinations.push({ o:'A', p:'low', type:'incongruent' }); 
+                combinations.push({ o:'B', p:'high', type:'incongruent' });
+            }
+        } else {
+            let odors = [];
+            if(fixedOdor && fixedOdor !== 'corr_pos' && fixedOdor !== 'corr_neg') {
+                odors = [fixedOdor];
+            } else {
+                odors = ['A', 'B'];
+            }
+
+            let pitches = [];
+            if(fixedPitch && fixedPitch !== 'corr_pos' && fixedPitch !== 'corr_neg') {
+                pitches = [fixedPitch];
+            } else {
+                pitches = ['high', 'low'];
+            }
+
+            odors.forEach(o => {
+                pitches.forEach(p => {
+                    let type = ((o==='A' && p==='high') || (o==='B' && p==='low')) ? 'congruent' : 'incongruent';
+                    combinations.push({ o:o, p:p, type:type });
+                });
+            });
+        }
+
+        let fullSet = [];
+        while(fullSet.length < trialCount) {
+            let batch = [...combinations];
+            shuffleArray(batch);
+            fullSet.push(...batch);
+        }
+        trials = fullSet.slice(0, trialCount);
+
+        return {
+            stage: stageName,
+            blockType: blockSubType,
+            totalTrials: trialCount,
+            trials: trials
+        };
+    }
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    function toggleConsentBtn() {
+        document.getElementById('btn-consent-next').disabled = !document.getElementById('chk-consent').checked;
+    }
+
+    function goToLearning() {
+        showScreen('screen-learning');
+    }
+
+    // ==========================================
+    // פונקציות אודיו עם ווליום קבוע
+    // ==========================================
+    function playLearnSound(type) {
+        stopSound(); 
+        initAudio();
+
+        const freq = (type === 'high') ? FREQ_H : FREQ_L;
+        const keyName = (type === 'high') ? 'V' : 'B';
+        const txt = (type === 'high') ? `מושמע: ${keyName} (גבוה)` : `מושמע: ${keyName} (נמוך)`;
+        
+        document.getElementById('learn-feedback').innerText = txt;
+        playTone(freq);
+        
+        setTimeout(() => {
+            stopSound();
+            document.getElementById('learn-feedback').innerText = "";
+        }, 500);
+    }
+
+    function playTone(freq) {
+        initAudio();
+        
+        osc = audioCtx.createOscillator();
+        gainNode = audioCtx.createGain();
+        
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        
+        // ווליום קבוע ונמוך
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(AUDIO_VOLUME, audioCtx.currentTime + 0.02);
+        
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        osc.start();
+    }
+
+    function stopSound() {
+        if(osc) {
+            try { 
+                if(gainNode) {
+                    gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.02);
+                }
+                setTimeout(() => {
+                    try { osc.stop(); osc.disconnect(); } catch(e){}
+                }, 30);
+            } catch(e){}
+            osc = null;
+            gainNode = null;
+        }
+    }
+
+    // ==========================================
+    // שלב אימון
+    // ==========================================
+    function startPractice() {
+        // סדר רנדומלי - האם צליל ראשון או ריח ראשון
+        practiceOrder = Math.random() < 0.5 ? ['pitch', 'odor'] : ['odor', 'pitch'];
+        currentPracticePhase = 0;
+        setupPracticePhase();
+    }
+
+    function setupPracticePhase() {
+        currentPracticeType = practiceOrder[currentPracticePhase];
+        currentPracticeTrialIndex = 0;
+        
+        // יצירת ניסיונות אימון - 4 ניסיונות לכל ממד (2 מכל סוג)
+        practiceTrials = [];
+        if (currentPracticeType === 'pitch') {
+            practiceTrials.push({ type: 'pitch', value: 'high' });
+            practiceTrials.push({ type: 'pitch', value: 'high' });
+            practiceTrials.push({ type: 'pitch', value: 'low' });
+            practiceTrials.push({ type: 'pitch', value: 'low' });
+        } else {
+            practiceTrials.push({ type: 'odor', value: 'A' });
+            practiceTrials.push({ type: 'odor', value: 'A' });
+            practiceTrials.push({ type: 'odor', value: 'B' });
+            practiceTrials.push({ type: 'odor', value: 'B' });
+        }
+        shuffleArray(practiceTrials);
+        
+        // אם זה אימון ריחות - הצג קודם מסך חוצץ לקריאה לנסיין
+        if (currentPracticeType === 'odor') {
+            showScreen('screen-call-experimenter');
+        } else {
+            showPracticeIntro();
+        }
+    }
+
+    function showPracticeOdorPrep() {
+        // הצגת רשימת הריחות לנסיין
+        const listEl = document.getElementById('practice-odor-list');
+        listEl.innerHTML = '';
+        practiceTrials.forEach((t, idx) => {
+            const odorName = (t.value === 'A') ? ODOR_A : ODOR_B;
+            listEl.innerHTML += `<div class="list-item"><strong>${idx + 1}.</strong> ${odorName}</div>`;
+        });
+        showScreen('screen-practice-odor-prep');
+    }
+
+    function showPracticeIntroForOdor() {
+        showPracticeIntro();
+    }
+
+    function showPracticeIntro() {
+        // הצגת הוראות האימון
+        if (currentPracticeType === 'pitch') {
+            document.getElementById('practice-intro-text').innerHTML = 
+                `<strong>אימון זיהוי צלילים</strong><br>
+                יושמע צליל. זהה האם הוא <strong>גבוה</strong> או <strong>נמוך</strong>.`;
+            document.getElementById('practice-lbl-v').innerText = 'גבוה (745Hz)';
+            document.getElementById('practice-lbl-b').innerText = 'נמוך (482Hz)';
+        } else {
+            document.getElementById('practice-intro-text').innerHTML = 
+                `<strong>אימון זיהוי ריחות</strong><br>
+                הרח את הריח. זהה האם הוא <strong>${ODOR_A}</strong> או <strong>${ODOR_B}</strong>.<br>
+                <small style="color: #7f8c8d;">(הנסיין יגיש לך את הריח)</small>`;
+            document.getElementById('practice-lbl-v').innerText = ODOR_A;
+            document.getElementById('practice-lbl-b').innerText = ODOR_B;
+        }
+        
+        showScreen('screen-practice-intro');
+    }
+
+    function startPracticeTrials() {
+        showScreen('screen-practice-trial');
+        setupNextPracticeTrial();
+    }
+
+    function setupNextPracticeTrial() {
+        if (currentPracticeTrialIndex >= practiceTrials.length) {
+            // סיום שלב אימון נוכחי
+            currentPracticePhase++;
+            if (currentPracticePhase < practiceOrder.length) {
+                // מעבר לממד הבא
+                setupPracticePhase();
+            } else {
+                // סיום כל האימון
+                showScreen('screen-practice-complete');
+            }
+            return;
+        }
+
+        const trial = practiceTrials[currentPracticeTrialIndex];
+        
+        document.getElementById('practice-header').innerText = 
+            `אימון ${currentPracticeType === 'pitch' ? 'צלילים' : 'ריחות'} - ניסיון ${currentPracticeTrialIndex + 1}/${practiceTrials.length}`;
+        document.getElementById('practice-fixation').style.color = '#2d3436';
+        document.getElementById('practice-stimulus').innerText = '';
+        document.getElementById('practice-feedback').innerHTML = '';
+        document.getElementById('practice-instruction').innerText = 'לחץ על רווח (Space) כדי להתחיל';
+        
+        practiceState = 'wait_for_start';
+    }
+
+    function beginPracticeTrial() {
+        const trial = practiceTrials[currentPracticeTrialIndex];
+        
+        document.getElementById('practice-instruction').innerText = '';
+        document.getElementById('practice-fixation').style.color = '#b2bec3';
+        
+        practiceState = 'pre_stimulus';
+        
+        setTimeout(() => {
+            if (practiceState !== 'pre_stimulus') return;
+            
+            if (trial.type === 'pitch') {
+                // השמעת צליל
+                const freq = trial.value === 'high' ? FREQ_H : FREQ_L;
+                playTone(freq);
+                document.getElementById('practice-stimulus').innerText = '🔊';
+            } else {
+                // הצגת הוראה להרחה
+                const odorName = trial.value === 'A' ? ODOR_A : ODOR_B;
+                document.getElementById('practice-stimulus').innerHTML = `<span style="font-size: 24px;">👃 הרח את הריח שהנסיין מגיש</span>`;
+            }
+            
+            document.getElementById('practice-fixation').style.color = '#27ae60';
+            document.getElementById('practice-instruction').innerText = 'הגב עם V או B';
+            
+            practiceState = 'awaiting_response';
+            practiceTrialStartTime = performance.now();
+        }, 500);
+    }
+
+    function recordPracticeResponse(code) {
+        stopSound();
+        
+        const trial = practiceTrials[currentPracticeTrialIndex];
+        const isKeyV = (code === 'KeyV');
+        
+        let isCorrect = false;
+        if (trial.type === 'pitch') {
+            if (trial.value === 'high' && isKeyV) isCorrect = true;
+            if (trial.value === 'low' && !isKeyV) isCorrect = true;
+        } else {
+            if (trial.value === 'A' && isKeyV) isCorrect = true;
+            if (trial.value === 'B' && !isKeyV) isCorrect = true;
+        }
+        
+        // הצגת משוב
+        if (isCorrect) {
+            document.getElementById('practice-feedback').innerHTML = 
+                '<span class="feedback-correct">✓ נכון!</span>';
+        } else {
+            const correctKey = (trial.type === 'pitch') ? 
+                (trial.value === 'high' ? 'V (גבוה)' : 'B (נמוך)') :
+                (trial.value === 'A' ? `V (${ODOR_A})` : `B (${ODOR_B})`);
+            document.getElementById('practice-feedback').innerHTML = 
+                `<span class="feedback-incorrect">✗ לא נכון - התשובה הנכונה: ${correctKey}</span>`;
+        }
+        
+        document.getElementById('practice-stimulus').innerText = '';
+        document.getElementById('practice-instruction').innerText = '';
+        
+        practiceState = 'feedback';
+        
+        // המתנה והמשך לניסיון הבא
+        setTimeout(() => {
+            currentPracticeTrialIndex++;
+            setupNextPracticeTrial();
+        }, 1500);
+    }
+
+    // ==========================================
+    // שלב הניסוי העיקרי
+    // ==========================================
+    function goToBlockPrep() {
+        currentBlockIndex = 0;
+        loadBlockPrep();
+    }
+
+    function loadBlockPrep() {
+        if(currentBlockIndex >= allBlocks.length) {
+            finishExperiment();
+            return;
+        }
+        const blk = allBlocks[currentBlockIndex];
+        document.getElementById('prep-title').innerText = `שלב: ${translateStage(blk.stage)} (${blk.blockID}) | בלוק ${blk.displayNum}`;
+        document.getElementById('prep-subtitle').innerText = `(בלוק כללי ${currentBlockIndex + 1} מתוך ${allBlocks.length})`;
+        
+        const listEl = document.getElementById('prep-list');
+        listEl.innerHTML = '';
+        blk.trials.forEach((t, idx) => {
+            let odorName = (t.o === 'A') ? ODOR_A : ODOR_B;
+            listEl.innerHTML += `<div class="list-item"><strong>${idx + 1}.</strong> ${odorName}</div>`;
+        });
+        showScreen('screen-prep');
+    }
+
+    function goToInstructions() {
+        const targetText = (group === 'PITCH') ? "גובה הצליל" : "ריח";
+        document.getElementById('txt-target').innerText = targetText;
+        if(group === 'PITCH') {
+            document.getElementById('instr-lbl-v').innerText = "גבוה (745Hz)";
+            document.getElementById('instr-lbl-b').innerText = "נמוך (482Hz)";
+        } else {
+            document.getElementById('instr-lbl-v').innerText = ODOR_A; 
+            document.getElementById('instr-lbl-b').innerText = ODOR_B; 
+        }
+        showScreen('screen-instructions');
+    }
+
+    function startBlock() {
+        if(document.activeElement) {
+            document.activeElement.blur();
+        }
+        currentTrialIndex = 0;
+        showScreen('screen-trial');
+        prepareTrialUI();
+    }
+
+    function prepareTrialUI() {
+        const blk = allBlocks[currentBlockIndex];
+        if(currentTrialIndex >= blk.totalTrials) {
+            endBlock();
+            return;
+        }
+        trialState = 'wait_for_start';
+        document.getElementById('fixation').style.color = '#2d3436'; 
+        document.getElementById('step-instruction').style.visibility = 'visible';
+        document.getElementById('step-instruction').innerText = "לחץ על רווח (Space) כדי להתחיל";
+    }
+
+    document.addEventListener('keydown', (e) => {
+        const code = e.code;
+
+        // מסך למידה
+        if(activeScreenId === 'screen-learning') {
+            if(code === 'KeyV') playLearnSound('high');
+            if(code === 'KeyB') playLearnSound('low');
+            return;
+        }
+
+        // מסך אימון
+        if(activeScreenId === 'screen-practice-trial') {
+            if(practiceState === 'wait_for_start' && code === 'Space') {
+                e.preventDefault();
+                beginPracticeTrial();
+            } else if(practiceState === 'awaiting_response' && (code === 'KeyV' || code === 'KeyB')) {
+                recordPracticeResponse(code);
+            }
+            return;
+        }
+
+        // מסך ניסוי עיקרי
+        if(activeScreenId === 'screen-trial') {
+            if(trialState === 'wait_for_start') {
+                if(code === 'Space') {
+                    e.preventDefault(); 
+                    beginTrialSequence();
+                }
+            }
+            else if(trialState === 'sound_playing') {
+                if(code === 'KeyV' || code === 'KeyB') {
+                    recordResponse(code);
+                }
+            }
+        }
+    });
+
+    function beginTrialSequence() {
+        trialState = 'pre_sound';
+        document.getElementById('step-instruction').style.visibility = 'hidden';
+        document.getElementById('fixation').style.color = '#b2bec3'; 
+
+        if(timer) clearTimeout(timer);
+        timer = setTimeout(playSoundAndStartTimer, DELAY_MS);
+    }
+
+    function playSoundAndStartTimer() {
+        if(trialState !== 'pre_sound') return;
+
+        const blk = allBlocks[currentBlockIndex];
+        const trial = blk.trials[currentTrialIndex];
+        const freq = (trial.p === 'high') ? FREQ_H : FREQ_L;
+
+        playTone(freq);
+
+        trialState = 'sound_playing';
+        trialStartTime = performance.now();
+        document.getElementById('fixation').style.color = '#27ae60';
+    }
+
+    function recordResponse(code) {
+        const endTime = performance.now();
+        const rt = Math.round(endTime - trialStartTime);
+        stopSound();
+        trialState = 'processing';
+
+        const blk = allBlocks[currentBlockIndex];
+        const trial = blk.trials[currentTrialIndex];
+        const isKeyV = (code === 'KeyV'); 
+
+        let isCorrect = false;
+        if(group === 'PITCH') {
+            if(trial.p === 'high' && isKeyV) isCorrect = true;
+            if(trial.p === 'low' && !isKeyV) isCorrect = true;
+        } else {
+            if(trial.o === 'A' && isKeyV) isCorrect = true;
+            if(trial.o === 'B' && !isKeyV) isCorrect = true;
+        }
+
+        experimentResults.push({
+            Subject: subjectId,
+            Group: group,
+            Stage: blk.stage,
+            BlockID: blk.blockID,
+            Trial: currentTrialIndex + 1,
+            Odor: (trial.o==='A' ? ODOR_A : ODOR_B),
+            Pitch: (trial.p==='high' ? FREQ_H : FREQ_L),
+            Congruency: trial.type,
+            Response: (isKeyV ? 'V' : 'B'), 
+            Correction: (isCorrect ? 'correct' : 'incorrect'), 
+            RT: rt 
+        });
+
+        currentTrialIndex++;
+        timer = setTimeout(prepareTrialUI, 500);
+    }
+
+    function endBlock() {
+        currentBlockIndex++;
+        showScreen('screen-break');
+    }
+
+    function nextBlock() {
+        loadBlockPrep();
+    }
+
+    function emergencySave() {
+        if(!confirm("האם לעצור את הניסוי ולשמור את הנתונים עד כה?")) return;
+        stopSound();
+        downloadCSV(); 
+        
+        setTimeout(() => {
+            alert("הקובץ ירד למחשב.\nלחץ 'אישור' כדי לרענן את הדף.");
+            location.reload();
+        }, 1000);
+    }
+
+    function finishExperiment() {
+        downloadCSV();
+        generateReports();
+        showScreen('screen-finish');
+    }
+
+    function generateReports() {
+        const stages = ['Baseline', 'Filtering', 'Correlation'];
+        let stageHtml = '';
+        stages.forEach(stg => {
+            const mean = calcMeanRT(experimentResults.filter(r => r.Stage === stg));
+            stageHtml += `<tr><td>${translateStage(stg)}</td><td>${mean} ms</td></tr>`;
+        });
+        document.querySelector('#table-stage-summary tbody').innerHTML = stageHtml;
+    }
+
+    function calcMeanRT(dataSubset) {
+        const correct = dataSubset.filter(r => r.Correction === 'correct');
+        if(correct.length === 0) return "-";
+        const sum = correct.reduce((a, b) => a + b.RT, 0);
+        return Math.round(sum / correct.length);
+    }
+
+    // ==========================================
+    // פונקציות הורדה - סדר חדש!
+    // ==========================================
+    function downloadCSV() {
+        let dataToSave = experimentResults;
+        if(dataToSave.length === 0) {
+            dataToSave = [{Subject: subjectId || "Unknown", Group: "NO_DATA"}];
+        }
+        
+        let csv = "";
+        
+        // 1. סיכום לפי שלב (ראשון!)
+        csv += "=== SUMMARY BY STAGE ===\n";
+        csv += "Subject,Group,Stage,Mean_RT_ms,Correct_Count,Total_Count,Accuracy_Percent\n";
+        ['Baseline', 'Filtering', 'Correlation'].forEach(stg => {
+            const stageData = experimentResults.filter(r => r.Stage === stg);
+            const correctData = stageData.filter(r => r.Correction === 'correct');
+            const meanRT = correctData.length > 0 ? Math.round(correctData.reduce((a, b) => a + b.RT, 0) / correctData.length) : '';
+            const accuracy = stageData.length > 0 ? Math.round((correctData.length / stageData.length) * 100) : '';
+            csv += `${subjectId},${group},${stg},${meanRT},${correctData.length},${stageData.length},${accuracy}\n`;
+        });
+        
+        csv += "\n";
+        
+        // 2. סיכום לפי בלוק
+        csv += "=== SUMMARY BY BLOCK ===\n";
+        csv += "Subject,Group,Stage,BlockID,Mean_RT_ms,Correct_Count,Total_Count,Accuracy_Percent\n";
+        const blockIDs = [...new Set(experimentResults.map(r => r.BlockID))];
+        blockIDs.forEach(bid => {
+            const blockData = experimentResults.filter(r => r.BlockID === bid);
+            if(blockData.length > 0) {
+                const correctData = blockData.filter(r => r.Correction === 'correct');
+                const meanRT = correctData.length > 0 ? Math.round(correctData.reduce((a, b) => a + b.RT, 0) / correctData.length) : '';
+                const accuracy = Math.round((correctData.length / blockData.length) * 100);
+                csv += `${subjectId},${group},${blockData[0].Stage},${bid},${meanRT},${correctData.length},${blockData.length},${accuracy}\n`;
+            }
+        });
+        
+        csv += "\n";
+        
+        // 3. נתונים גולמיים
+        csv += "=== RAW DATA ===\n";
+        csv += "Subject,Group,Stage,BlockID,Trial,Odor,Pitch,Congruency,Response,Correction,RT_ms\n";
+        dataToSave.forEach(r => {
+            csv += `${r.Subject||''},${r.Group||''},${r.Stage||''},${r.BlockID||''},${r.Trial||''},${r.Odor||''},${r.Pitch||''},${r.Congruency||''},${r.Response||''},${r.Correction||''},${r.RT||''}\n`;
+        });
+        
+        saveFile(csv, `Garner_Full_${subjectId || 'Backup'}.csv`);
+    }
+
+    function downloadSummaryCSV() {
+        let csv = "";
+        
+        // 1. סיכום לפי שלב (ראשון!)
+        csv += "Subject,Group,Category,Name,Mean_RT_ms,Correct_Count,Total_Count,Accuracy_Percent\n";
+        ['Baseline', 'Filtering', 'Correlation'].forEach(stg => {
+            const stageData = experimentResults.filter(r => r.Stage === stg);
+            const correctData = stageData.filter(r => r.Correction === 'correct');
+            const meanRT = correctData.length > 0 ? Math.round(correctData.reduce((a, b) => a + b.RT, 0) / correctData.length) : '';
+            const accuracy = stageData.length > 0 ? Math.round((correctData.length / stageData.length) * 100) : '';
+            csv += `${subjectId},${group},Stage,${stg},${meanRT},${correctData.length},${stageData.length},${accuracy}\n`;
+        });
+        
+        // 2. סיכום לפי בלוק
+        const blockIDs = [...new Set(experimentResults.map(r => r.BlockID))];
+        blockIDs.forEach(bid => {
+            const blockData = experimentResults.filter(r => r.BlockID === bid);
+            if(blockData.length > 0) {
+                const correctData = blockData.filter(r => r.Correction === 'correct');
+                const meanRT = correctData.length > 0 ? Math.round(correctData.reduce((a, b) => a + b.RT, 0) / correctData.length) : '';
+                const accuracy = Math.round((correctData.length / blockData.length) * 100);
+                csv += `${subjectId},${group},BlockID,${bid},${meanRT},${correctData.length},${blockData.length},${accuracy}\n`;
+            }
+        });
+        
+        saveFile(csv, `Garner_Summary_${subjectId}.csv`);
+    }
+
+    function saveFile(content, fileName) {
+        const blob = new Blob(["\uFEFF" + content], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function translateStage(s) {
+        if(s === 'Baseline') return 'בייסליין';
+        if(s === 'Filtering') return 'פילטרינג';
+        return 'קורלציה';
+    }
+</script>
+</body>
+</html>
