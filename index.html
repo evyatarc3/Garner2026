@@ -63,12 +63,41 @@
             <input type="text" id="inp-subject" placeholder="לדוגמה: 1-24">
         </div>
         <div class="form-group">
+            <label>גיל:</label>
+            <input type="number" id="inp-age" placeholder="לדוגמה: 25" min="1" max="120">
+        </div>
+        <div class="form-group">
+            <label>מגדר:</label>
+            <select id="inp-gender">
+                <option value="">-- בחר/י --</option>
+                <option value="male">זכר</option>
+                <option value="female">נקבה</option>
+                <option value="other">אחר</option>
+            </select>
+        </div>
+        <div class="form-group">
             <label>ממד רלוונטי (קבוצה):</label>
             <select id="inp-group">
                 <option value="PITCH">קבוצה 1: צליל (Pitch)</option>
                 <option value="ODOR">קבוצה 2: ריח (Odor)</option>
             </select>
         </div>
+
+        <hr style="width: 100%; margin: 25px 0; border-color: #dfe6e9;">
+        <h3 style="color: #7f8c8d;">הגדרות ייצוא לגיטהאב (אופציונלי)</h3>
+        <div class="form-group">
+            <label>GitHub Token:</label>
+            <input type="password" id="inp-github-token" placeholder="ghp_...">
+        </div>
+        <div class="form-group">
+            <label>שם ריפו (owner/repo):</label>
+            <input type="text" id="inp-github-repo" placeholder="לדוגמה: evyatarc3/Garner2026" value="evyatarc3/Garner2026">
+        </div>
+        <div class="form-group">
+            <label>תיקיית נתונים בריפו:</label>
+            <input type="text" id="inp-github-path" placeholder="לדוגמה: data" value="data">
+        </div>
+
         <button class="btn" onclick="initExperiment()">המשך</button>
     </div>
 
@@ -246,7 +275,7 @@
     <!-- מסך סיום -->
     <div id="screen-finish" class="hidden">
         <h1>הניסוי הסתיים!</h1>
-        <p style="color: green; font-weight: bold;">קובץ הנתונים הגולמיים (Raw Data) ירד למחשב.</p>
+        <p style="color: green; font-weight: bold;">קובץ הנתונים הגולמיים (Raw Data) ירד למחשב ומועלה לגיטהאב.</p>
         
         <div class="tables-wrapper">
             <span style="font-weight: bold; font-size: 22px;">סיכום ממוצעים (RT ב-ms)</span>
@@ -256,8 +285,11 @@
             </table>
         </div>
 
+        <div id="github-status" style="margin-top: 15px; font-size: 18px; min-height: 30px;"></div>
+
         <div class="finish-buttons">
             <button class="btn btn-summary" onclick="downloadSummaryCSV()">📥 הורד קובץ סיכום ממוצעים</button>
+            <button class="btn" onclick="exportToGitHub()" style="background-color: #24292e;">🐙 העלה שוב לגיטהאב</button>
             <button class="btn btn-secondary" onclick="location.reload()">התחל נבדק חדש</button>
         </div>
     </div>
@@ -280,7 +312,14 @@
     let timer = null;
 
     let subjectId = "";
-    let group = ""; 
+    let subjectAge = "";
+    let subjectGender = "";
+    let group = "";
+
+    // --- GitHub export ---
+    let githubToken = "";
+    let githubRepo = "";
+    let githubPath = "data";
     
     let allBlocks = []; 
     let currentBlockIndex = 0;
@@ -339,14 +378,31 @@
     // ==========================================
     function initExperiment() {
         const subjInput = document.getElementById('inp-subject');
+        const ageInput = document.getElementById('inp-age');
+        const genderInput = document.getElementById('inp-gender');
         const groupInput = document.getElementById('inp-group');
-        
+
         subjectId = subjInput.value.trim();
-        if(!subjectId) { 
-            alert("נא להזין מספר נבדק"); 
-            return; 
+        if(!subjectId) {
+            alert("נא להזין מספר נבדק");
+            return;
+        }
+        subjectAge = ageInput.value.trim();
+        if(!subjectAge) {
+            alert("נא להזין גיל");
+            return;
+        }
+        subjectGender = genderInput.value;
+        if(!subjectGender) {
+            alert("נא לבחור מגדר");
+            return;
         }
         group = groupInput.value;
+
+        // GitHub settings (optional)
+        githubToken = document.getElementById('inp-github-token').value.trim();
+        githubRepo = document.getElementById('inp-github-repo').value.trim();
+        githubPath = document.getElementById('inp-github-path').value.trim() || 'data';
 
         createExperimentPlan();
         showScreen('screen-consent');
@@ -830,6 +886,8 @@
 
         experimentResults.push({
             Subject: subjectId,
+            Age: subjectAge,
+            Gender: subjectGender,
             Group: group,
             Stage: blk.stage,
             BlockID: blk.blockID,
@@ -837,9 +895,9 @@
             Odor: (trial.o==='A' ? ODOR_A : ODOR_B),
             Pitch: (trial.p==='high' ? FREQ_H : FREQ_L),
             Congruency: trial.type,
-            Response: (isKeyV ? 'V' : 'B'), 
-            Correction: (isCorrect ? 'correct' : 'incorrect'), 
-            RT: rt 
+            Response: (isKeyV ? 'V' : 'B'),
+            Correction: (isCorrect ? 'correct' : 'incorrect'),
+            RT: rt
         });
 
         currentTrialIndex++;
@@ -870,6 +928,8 @@
         downloadCSV();
         generateReports();
         showScreen('screen-finish');
+        // auto-upload to GitHub
+        exportToGitHub();
     }
 
     function generateReports() {
@@ -902,20 +962,20 @@
         
         // 1. סיכום לפי שלב (ראשון!)
         csv += "=== SUMMARY BY STAGE ===\n";
-        csv += "Subject,Group,Stage,Mean_RT_ms,Correct_Count,Total_Count,Accuracy_Percent\n";
+        csv += "Subject,Age,Gender,Group,Stage,Mean_RT_ms,Correct_Count,Total_Count,Accuracy_Percent\n";
         ['Baseline', 'Filtering', 'Correlation'].forEach(stg => {
             const stageData = experimentResults.filter(r => r.Stage === stg);
             const correctData = stageData.filter(r => r.Correction === 'correct');
             const meanRT = correctData.length > 0 ? Math.round(correctData.reduce((a, b) => a + b.RT, 0) / correctData.length) : '';
             const accuracy = stageData.length > 0 ? Math.round((correctData.length / stageData.length) * 100) : '';
-            csv += `${subjectId},${group},${stg},${meanRT},${correctData.length},${stageData.length},${accuracy}\n`;
+            csv += `${subjectId},${subjectAge},${subjectGender},${group},${stg},${meanRT},${correctData.length},${stageData.length},${accuracy}\n`;
         });
         
         csv += "\n";
         
         // 2. סיכום לפי בלוק
         csv += "=== SUMMARY BY BLOCK ===\n";
-        csv += "Subject,Group,Stage,BlockID,Mean_RT_ms,Correct_Count,Total_Count,Accuracy_Percent\n";
+        csv += "Subject,Age,Gender,Group,Stage,BlockID,Mean_RT_ms,Correct_Count,Total_Count,Accuracy_Percent\n";
         const blockIDs = [...new Set(experimentResults.map(r => r.BlockID))];
         blockIDs.forEach(bid => {
             const blockData = experimentResults.filter(r => r.BlockID === bid);
@@ -923,17 +983,17 @@
                 const correctData = blockData.filter(r => r.Correction === 'correct');
                 const meanRT = correctData.length > 0 ? Math.round(correctData.reduce((a, b) => a + b.RT, 0) / correctData.length) : '';
                 const accuracy = Math.round((correctData.length / blockData.length) * 100);
-                csv += `${subjectId},${group},${blockData[0].Stage},${bid},${meanRT},${correctData.length},${blockData.length},${accuracy}\n`;
+                csv += `${subjectId},${subjectAge},${subjectGender},${group},${blockData[0].Stage},${bid},${meanRT},${correctData.length},${blockData.length},${accuracy}\n`;
             }
         });
-        
+
         csv += "\n";
-        
+
         // 3. נתונים גולמיים
         csv += "=== RAW DATA ===\n";
-        csv += "Subject,Group,Stage,BlockID,Trial,Odor,Pitch,Congruency,Response,Correction,RT_ms\n";
+        csv += "Subject,Age,Gender,Group,Stage,BlockID,Trial,Odor,Pitch,Congruency,Response,Correction,RT_ms\n";
         dataToSave.forEach(r => {
-            csv += `${r.Subject||''},${r.Group||''},${r.Stage||''},${r.BlockID||''},${r.Trial||''},${r.Odor||''},${r.Pitch||''},${r.Congruency||''},${r.Response||''},${r.Correction||''},${r.RT||''}\n`;
+            csv += `${r.Subject||''},${r.Age||''},${r.Gender||''},${r.Group||''},${r.Stage||''},${r.BlockID||''},${r.Trial||''},${r.Odor||''},${r.Pitch||''},${r.Congruency||''},${r.Response||''},${r.Correction||''},${r.RT||''}\n`;
         });
         
         saveFile(csv, `Garner_Full_${subjectId || 'Backup'}.csv`);
@@ -941,17 +1001,17 @@
 
     function downloadSummaryCSV() {
         let csv = "";
-        
+
         // 1. סיכום לפי שלב (ראשון!)
-        csv += "Subject,Group,Category,Name,Mean_RT_ms,Correct_Count,Total_Count,Accuracy_Percent\n";
+        csv += "Subject,Age,Gender,Group,Category,Name,Mean_RT_ms,Correct_Count,Total_Count,Accuracy_Percent\n";
         ['Baseline', 'Filtering', 'Correlation'].forEach(stg => {
             const stageData = experimentResults.filter(r => r.Stage === stg);
             const correctData = stageData.filter(r => r.Correction === 'correct');
             const meanRT = correctData.length > 0 ? Math.round(correctData.reduce((a, b) => a + b.RT, 0) / correctData.length) : '';
             const accuracy = stageData.length > 0 ? Math.round((correctData.length / stageData.length) * 100) : '';
-            csv += `${subjectId},${group},Stage,${stg},${meanRT},${correctData.length},${stageData.length},${accuracy}\n`;
+            csv += `${subjectId},${subjectAge},${subjectGender},${group},Stage,${stg},${meanRT},${correctData.length},${stageData.length},${accuracy}\n`;
         });
-        
+
         // 2. סיכום לפי בלוק
         const blockIDs = [...new Set(experimentResults.map(r => r.BlockID))];
         blockIDs.forEach(bid => {
@@ -960,10 +1020,10 @@
                 const correctData = blockData.filter(r => r.Correction === 'correct');
                 const meanRT = correctData.length > 0 ? Math.round(correctData.reduce((a, b) => a + b.RT, 0) / correctData.length) : '';
                 const accuracy = Math.round((correctData.length / blockData.length) * 100);
-                csv += `${subjectId},${group},BlockID,${bid},${meanRT},${correctData.length},${blockData.length},${accuracy}\n`;
+                csv += `${subjectId},${subjectAge},${subjectGender},${group},BlockID,${bid},${meanRT},${correctData.length},${blockData.length},${accuracy}\n`;
             }
         });
-        
+
         saveFile(csv, `Garner_Summary_${subjectId}.csv`);
     }
 
@@ -976,6 +1036,111 @@
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    }
+
+    // ==========================================
+    // ייצוא לגיטהאב
+    // ==========================================
+    async function uploadToGitHub(content, fileName) {
+        if (!githubToken || !githubRepo) return false;
+
+        const filePath = `${githubPath}/${fileName}`;
+        const apiUrl = `https://api.github.com/repos/${githubRepo}/contents/${filePath}`;
+
+        // Check if file already exists (to get SHA for update)
+        let sha = null;
+        try {
+            const checkRes = await fetch(apiUrl, {
+                headers: { 'Authorization': `token ${githubToken}` }
+            });
+            if (checkRes.ok) {
+                const existing = await checkRes.json();
+                sha = existing.sha;
+            }
+        } catch(e) { /* file doesn't exist yet, that's fine */ }
+
+        const body = {
+            message: `Add data: ${fileName}`,
+            content: btoa(unescape(encodeURIComponent("\uFEFF" + content)))
+        };
+        if (sha) body.sha = sha;
+
+        try {
+            const res = await fetch(apiUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${githubToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+            return res.ok;
+        } catch(e) {
+            return false;
+        }
+    }
+
+    function buildFullCSVContent() {
+        let dataToSave = experimentResults;
+        if(dataToSave.length === 0) {
+            dataToSave = [{Subject: subjectId || "Unknown", Group: "NO_DATA"}];
+        }
+
+        let csv = "";
+
+        csv += "=== SUMMARY BY STAGE ===\n";
+        csv += "Subject,Age,Gender,Group,Stage,Mean_RT_ms,Correct_Count,Total_Count,Accuracy_Percent\n";
+        ['Baseline', 'Filtering', 'Correlation'].forEach(stg => {
+            const stageData = experimentResults.filter(r => r.Stage === stg);
+            const correctData = stageData.filter(r => r.Correction === 'correct');
+            const meanRT = correctData.length > 0 ? Math.round(correctData.reduce((a, b) => a + b.RT, 0) / correctData.length) : '';
+            const accuracy = stageData.length > 0 ? Math.round((correctData.length / stageData.length) * 100) : '';
+            csv += `${subjectId},${subjectAge},${subjectGender},${group},${stg},${meanRT},${correctData.length},${stageData.length},${accuracy}\n`;
+        });
+
+        csv += "\n";
+
+        csv += "=== SUMMARY BY BLOCK ===\n";
+        csv += "Subject,Age,Gender,Group,Stage,BlockID,Mean_RT_ms,Correct_Count,Total_Count,Accuracy_Percent\n";
+        const blockIDs = [...new Set(experimentResults.map(r => r.BlockID))];
+        blockIDs.forEach(bid => {
+            const blockData = experimentResults.filter(r => r.BlockID === bid);
+            if(blockData.length > 0) {
+                const correctData = blockData.filter(r => r.Correction === 'correct');
+                const meanRT = correctData.length > 0 ? Math.round(correctData.reduce((a, b) => a + b.RT, 0) / correctData.length) : '';
+                const accuracy = Math.round((correctData.length / blockData.length) * 100);
+                csv += `${subjectId},${subjectAge},${subjectGender},${group},${blockData[0].Stage},${bid},${meanRT},${correctData.length},${blockData.length},${accuracy}\n`;
+            }
+        });
+
+        csv += "\n";
+
+        csv += "=== RAW DATA ===\n";
+        csv += "Subject,Age,Gender,Group,Stage,BlockID,Trial,Odor,Pitch,Congruency,Response,Correction,RT_ms\n";
+        dataToSave.forEach(r => {
+            csv += `${r.Subject||''},${r.Age||''},${r.Gender||''},${r.Group||''},${r.Stage||''},${r.BlockID||''},${r.Trial||''},${r.Odor||''},${r.Pitch||''},${r.Congruency||''},${r.Response||''},${r.Correction||''},${r.RT||''}\n`;
+        });
+
+        return csv;
+    }
+
+    async function exportToGitHub() {
+        const statusEl = document.getElementById('github-status');
+        if (!githubToken || !githubRepo) {
+            if (statusEl) statusEl.innerHTML = '<span style="color: #e67e22;">⚠️ לא הוגדר GitHub Token או ריפו</span>';
+            return;
+        }
+
+        if (statusEl) statusEl.innerHTML = '<span style="color: #2980b9;">⏳ מעלה לגיטהאב...</span>';
+
+        const fullCsv = buildFullCSVContent();
+        const fullOk = await uploadToGitHub(fullCsv, `Garner_Full_${subjectId || 'Backup'}.csv`);
+
+        if (fullOk) {
+            if (statusEl) statusEl.innerHTML = '<span style="color: #27ae60;">✅ הנתונים הועלו בהצלחה לגיטהאב!</span>';
+        } else {
+            if (statusEl) statusEl.innerHTML = '<span style="color: #e74c3c;">❌ שגיאה בהעלאה לגיטהאב - בדוק את ה-Token והריפו</span>';
+        }
     }
 
     function translateStage(s) {
