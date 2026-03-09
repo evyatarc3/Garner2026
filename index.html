@@ -416,11 +416,11 @@
         // 1. Baseline
         let baselineBlocks = [];
         if(group === 'PITCH') {
-            baselineBlocks.push(generateBlockTrials('Baseline', 'Fixed_Odor_A', 'A', null, 6));
-            baselineBlocks.push(generateBlockTrials('Baseline', 'Fixed_Odor_B', 'B', null, 6));
+            baselineBlocks.push(generateBlockTrials('Baseline', 'Fixed_Odor_A', 'A', null, 12));
+            baselineBlocks.push(generateBlockTrials('Baseline', 'Fixed_Odor_B', 'B', null, 12));
         } else {
-            baselineBlocks.push(generateBlockTrials('Baseline', 'Fixed_Pitch_High', null, 'high', 6));
-            baselineBlocks.push(generateBlockTrials('Baseline', 'Fixed_Pitch_Low', null, 'low', 6));
+            baselineBlocks.push(generateBlockTrials('Baseline', 'Fixed_Pitch_High', null, 'high', 12));
+            baselineBlocks.push(generateBlockTrials('Baseline', 'Fixed_Pitch_Low', null, 'low', 12));
         }
         shuffleArray(baselineBlocks);
         baselineBlocks.forEach((blk, idx) => blk.blockID = `Baseline_${idx+1}`);
@@ -434,8 +434,8 @@
 
         // 3. Correlation
         let correlationBlocks = [];
-        correlationBlocks.push(generateBlockTrials('Correlation', 'Corr_Pos', 'corr_pos', 'corr_pos', 6));
-        correlationBlocks.push(generateBlockTrials('Correlation', 'Corr_Neg', 'corr_neg', 'corr_neg', 6));
+        correlationBlocks.push(generateBlockTrials('Correlation', 'Corr_Pos', 'corr_pos', 'corr_pos', 12));
+        correlationBlocks.push(generateBlockTrials('Correlation', 'Corr_Neg', 'corr_neg', 'corr_neg', 12));
         shuffleArray(correlationBlocks);
         correlationBlocks.forEach((blk, idx) => blk.blockID = `Correlation_${idx+1}`);
         stagesData.push(correlationBlocks);
@@ -587,16 +587,20 @@
         currentPracticeType = practiceOrder[currentPracticePhase];
         currentPracticeTrialIndex = 0;
         
-        // יצירת ניסיונות אימון - 4 ניסיונות לכל ממד (2 מכל סוג)
+        // יצירת ניסיונות אימון - 6 ניסיונות לכל ממד (3 מכל סוג)
         practiceTrials = [];
         if (currentPracticeType === 'pitch') {
             practiceTrials.push({ type: 'pitch', value: 'high' });
             practiceTrials.push({ type: 'pitch', value: 'high' });
+            practiceTrials.push({ type: 'pitch', value: 'high' });
+            practiceTrials.push({ type: 'pitch', value: 'low' });
             practiceTrials.push({ type: 'pitch', value: 'low' });
             practiceTrials.push({ type: 'pitch', value: 'low' });
         } else {
             practiceTrials.push({ type: 'odor', value: 'A' });
             practiceTrials.push({ type: 'odor', value: 'A' });
+            practiceTrials.push({ type: 'odor', value: 'A' });
+            practiceTrials.push({ type: 'odor', value: 'B' });
             practiceTrials.push({ type: 'odor', value: 'B' });
             practiceTrials.push({ type: 'odor', value: 'B' });
         }
