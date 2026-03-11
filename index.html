@@ -1112,27 +1112,35 @@
         let csv = "";
 
         csv += "=== SUMMARY BY STAGE ===\n";
-        csv += "Subject,Age,Gender,Group,Stage,Mean_RT_ms,Correct_Count,Total_Count,Accuracy_Percent\n";
+        csv += "Subject,Age,Gender,Group,Stage,Mean_RT_ms,Mean_RT_Congruent,Mean_RT_Incongruent,Correct_Count,Total_Count,Accuracy_Percent\n";
         ['Baseline', 'Filtering', 'Correlation'].forEach(stg => {
             const stageData = experimentResults.filter(r => r.Stage === stg);
             const correctData = stageData.filter(r => r.Correction === 'correct');
             const meanRT = correctData.length > 0 ? Math.round(correctData.reduce((a, b) => a + b.RT, 0) / correctData.length) : '';
+            const congData = stageData.filter(r => r.Congruency === 'congruent' && r.Correction === 'correct');
+            const incongData = stageData.filter(r => r.Congruency === 'incongruent' && r.Correction === 'correct');
+            const meanCong = congData.length > 0 ? Math.round(congData.reduce((a, b) => a + b.RT, 0) / congData.length) : '';
+            const meanIncong = incongData.length > 0 ? Math.round(incongData.reduce((a, b) => a + b.RT, 0) / incongData.length) : '';
             const accuracy = stageData.length > 0 ? Math.round((correctData.length / stageData.length) * 100) : '';
-            csv += `${subjectId},${subjectAge},${subjectGender},${group},${stg},${meanRT},${correctData.length},${stageData.length},${accuracy}\n`;
+            csv += `${subjectId},${subjectAge},${subjectGender},${group},${stg},${meanRT},${meanCong},${meanIncong},${correctData.length},${stageData.length},${accuracy}\n`;
         });
 
         csv += "\n";
 
         csv += "=== SUMMARY BY BLOCK ===\n";
-        csv += "Subject,Age,Gender,Group,Stage,BlockID,Mean_RT_ms,Correct_Count,Total_Count,Accuracy_Percent\n";
+        csv += "Subject,Age,Gender,Group,Stage,BlockID,Mean_RT_ms,Mean_RT_Congruent,Mean_RT_Incongruent,Correct_Count,Total_Count,Accuracy_Percent\n";
         const blockIDs = [...new Set(experimentResults.map(r => r.BlockID))];
         blockIDs.forEach(bid => {
             const blockData = experimentResults.filter(r => r.BlockID === bid);
             if(blockData.length > 0) {
                 const correctData = blockData.filter(r => r.Correction === 'correct');
                 const meanRT = correctData.length > 0 ? Math.round(correctData.reduce((a, b) => a + b.RT, 0) / correctData.length) : '';
+                const congData = blockData.filter(r => r.Congruency === 'congruent' && r.Correction === 'correct');
+                const incongData = blockData.filter(r => r.Congruency === 'incongruent' && r.Correction === 'correct');
+                const meanCong = congData.length > 0 ? Math.round(congData.reduce((a, b) => a + b.RT, 0) / congData.length) : '';
+                const meanIncong = incongData.length > 0 ? Math.round(incongData.reduce((a, b) => a + b.RT, 0) / incongData.length) : '';
                 const accuracy = Math.round((correctData.length / blockData.length) * 100);
-                csv += `${subjectId},${subjectAge},${subjectGender},${group},${blockData[0].Stage},${bid},${meanRT},${correctData.length},${blockData.length},${accuracy}\n`;
+                csv += `${subjectId},${subjectAge},${subjectGender},${group},${blockData[0].Stage},${bid},${meanRT},${meanCong},${meanIncong},${correctData.length},${blockData.length},${accuracy}\n`;
             }
         });
 
