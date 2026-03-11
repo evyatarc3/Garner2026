@@ -95,7 +95,7 @@
         </div>
         <div class="form-group">
             <label>תיקיית נתונים בריפו:</label>
-            <input type="text" id="inp-github-path" placeholder="לדוגמה: data" value="data">
+            <input type="text" id="inp-github-path" placeholder="לדוגמה: Subjects" value="Subjects">
         </div>
 
         <button class="btn" onclick="initExperiment()">המשך</button>
@@ -280,7 +280,7 @@
         <div class="tables-wrapper">
             <span style="font-weight: bold; font-size: 22px;">סיכום ממוצעים (RT ב-ms)</span>
             <table id="table-stage-summary">
-                <thead><tr><th>שלב</th><th>RT ממוצע (נכונות בלבד)</th></tr></thead>
+                <thead><tr><th>שלב</th><th>RT ממוצע</th><th>RT תואם</th><th>RT לא תואם</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
@@ -940,8 +940,11 @@
         const stages = ['Baseline', 'Filtering', 'Correlation'];
         let stageHtml = '';
         stages.forEach(stg => {
-            const mean = calcMeanRT(experimentResults.filter(r => r.Stage === stg));
-            stageHtml += `<tr><td>${translateStage(stg)}</td><td>${mean} ms</td></tr>`;
+            const stageData = experimentResults.filter(r => r.Stage === stg);
+            const mean = calcMeanRT(stageData);
+            const meanCong = calcMeanRT(stageData.filter(r => r.Congruency === 'congruent'));
+            const meanIncong = calcMeanRT(stageData.filter(r => r.Congruency === 'incongruent'));
+            stageHtml += `<tr><td>${translateStage(stg)}</td><td>${mean} ms</td><td>${meanCong} ms</td><td>${meanIncong} ms</td></tr>`;
         });
         document.querySelector('#table-stage-summary tbody').innerHTML = stageHtml;
     }
@@ -966,28 +969,36 @@
         
         // 1. סיכום לפי שלב (ראשון!)
         csv += "=== SUMMARY BY STAGE ===\n";
-        csv += "Subject,Age,Gender,Group,Stage,Mean_RT_ms,Correct_Count,Total_Count,Accuracy_Percent\n";
+        csv += "Subject,Age,Gender,Group,Stage,Mean_RT_ms,Mean_RT_Congruent,Mean_RT_Incongruent,Correct_Count,Total_Count,Accuracy_Percent\n";
         ['Baseline', 'Filtering', 'Correlation'].forEach(stg => {
             const stageData = experimentResults.filter(r => r.Stage === stg);
             const correctData = stageData.filter(r => r.Correction === 'correct');
             const meanRT = correctData.length > 0 ? Math.round(correctData.reduce((a, b) => a + b.RT, 0) / correctData.length) : '';
+            const congData = stageData.filter(r => r.Congruency === 'congruent' && r.Correction === 'correct');
+            const incongData = stageData.filter(r => r.Congruency === 'incongruent' && r.Correction === 'correct');
+            const meanCong = congData.length > 0 ? Math.round(congData.reduce((a, b) => a + b.RT, 0) / congData.length) : '';
+            const meanIncong = incongData.length > 0 ? Math.round(incongData.reduce((a, b) => a + b.RT, 0) / incongData.length) : '';
             const accuracy = stageData.length > 0 ? Math.round((correctData.length / stageData.length) * 100) : '';
-            csv += `${subjectId},${subjectAge},${subjectGender},${group},${stg},${meanRT},${correctData.length},${stageData.length},${accuracy}\n`;
+            csv += `${subjectId},${subjectAge},${subjectGender},${group},${stg},${meanRT},${meanCong},${meanIncong},${correctData.length},${stageData.length},${accuracy}\n`;
         });
         
         csv += "\n";
         
         // 2. סיכום לפי בלוק
         csv += "=== SUMMARY BY BLOCK ===\n";
-        csv += "Subject,Age,Gender,Group,Stage,BlockID,Mean_RT_ms,Correct_Count,Total_Count,Accuracy_Percent\n";
+        csv += "Subject,Age,Gender,Group,Stage,BlockID,Mean_RT_ms,Mean_RT_Congruent,Mean_RT_Incongruent,Correct_Count,Total_Count,Accuracy_Percent\n";
         const blockIDs = [...new Set(experimentResults.map(r => r.BlockID))];
         blockIDs.forEach(bid => {
             const blockData = experimentResults.filter(r => r.BlockID === bid);
             if(blockData.length > 0) {
                 const correctData = blockData.filter(r => r.Correction === 'correct');
                 const meanRT = correctData.length > 0 ? Math.round(correctData.reduce((a, b) => a + b.RT, 0) / correctData.length) : '';
+                const congData = blockData.filter(r => r.Congruency === 'congruent' && r.Correction === 'correct');
+                const incongData = blockData.filter(r => r.Congruency === 'incongruent' && r.Correction === 'correct');
+                const meanCong = congData.length > 0 ? Math.round(congData.reduce((a, b) => a + b.RT, 0) / congData.length) : '';
+                const meanIncong = incongData.length > 0 ? Math.round(incongData.reduce((a, b) => a + b.RT, 0) / incongData.length) : '';
                 const accuracy = Math.round((correctData.length / blockData.length) * 100);
-                csv += `${subjectId},${subjectAge},${subjectGender},${group},${blockData[0].Stage},${bid},${meanRT},${correctData.length},${blockData.length},${accuracy}\n`;
+                csv += `${subjectId},${subjectAge},${subjectGender},${group},${blockData[0].Stage},${bid},${meanRT},${meanCong},${meanIncong},${correctData.length},${blockData.length},${accuracy}\n`;
             }
         });
 
@@ -1007,13 +1018,17 @@
         let csv = "";
 
         // 1. סיכום לפי שלב (ראשון!)
-        csv += "Subject,Age,Gender,Group,Category,Name,Mean_RT_ms,Correct_Count,Total_Count,Accuracy_Percent\n";
+        csv += "Subject,Age,Gender,Group,Category,Name,Mean_RT_ms,Mean_RT_Congruent,Mean_RT_Incongruent,Correct_Count,Total_Count,Accuracy_Percent\n";
         ['Baseline', 'Filtering', 'Correlation'].forEach(stg => {
             const stageData = experimentResults.filter(r => r.Stage === stg);
             const correctData = stageData.filter(r => r.Correction === 'correct');
             const meanRT = correctData.length > 0 ? Math.round(correctData.reduce((a, b) => a + b.RT, 0) / correctData.length) : '';
+            const congData = stageData.filter(r => r.Congruency === 'congruent' && r.Correction === 'correct');
+            const incongData = stageData.filter(r => r.Congruency === 'incongruent' && r.Correction === 'correct');
+            const meanCong = congData.length > 0 ? Math.round(congData.reduce((a, b) => a + b.RT, 0) / congData.length) : '';
+            const meanIncong = incongData.length > 0 ? Math.round(incongData.reduce((a, b) => a + b.RT, 0) / incongData.length) : '';
             const accuracy = stageData.length > 0 ? Math.round((correctData.length / stageData.length) * 100) : '';
-            csv += `${subjectId},${subjectAge},${subjectGender},${group},Stage,${stg},${meanRT},${correctData.length},${stageData.length},${accuracy}\n`;
+            csv += `${subjectId},${subjectAge},${subjectGender},${group},Stage,${stg},${meanRT},${meanCong},${meanIncong},${correctData.length},${stageData.length},${accuracy}\n`;
         });
 
         // 2. סיכום לפי בלוק
@@ -1023,8 +1038,12 @@
             if(blockData.length > 0) {
                 const correctData = blockData.filter(r => r.Correction === 'correct');
                 const meanRT = correctData.length > 0 ? Math.round(correctData.reduce((a, b) => a + b.RT, 0) / correctData.length) : '';
+                const congData = blockData.filter(r => r.Congruency === 'congruent' && r.Correction === 'correct');
+                const incongData = blockData.filter(r => r.Congruency === 'incongruent' && r.Correction === 'correct');
+                const meanCong = congData.length > 0 ? Math.round(congData.reduce((a, b) => a + b.RT, 0) / congData.length) : '';
+                const meanIncong = incongData.length > 0 ? Math.round(incongData.reduce((a, b) => a + b.RT, 0) / incongData.length) : '';
                 const accuracy = Math.round((correctData.length / blockData.length) * 100);
-                csv += `${subjectId},${subjectAge},${subjectGender},${group},BlockID,${bid},${meanRT},${correctData.length},${blockData.length},${accuracy}\n`;
+                csv += `${subjectId},${subjectAge},${subjectGender},${group},BlockID,${bid},${meanRT},${meanCong},${meanIncong},${correctData.length},${blockData.length},${accuracy}\n`;
             }
         });
 
